@@ -1,12 +1,11 @@
 from flask import Flask, request, jsonify, send_file, send_from_directory
-from flask_cors import CORS
 from qr.qr_generator import generate_secure_token, save_token, validate_token, generate_qr_for_file
 import os
 import hashlib
 from Crypto.Cipher import AES
 
 app = Flask(__name__)
-CORS(app)
+
 app.secret_key = "supersecretkey"
 
 UPLOAD_FOLDER = "uploads"
