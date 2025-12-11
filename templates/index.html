@@ -9,7 +9,9 @@
     <h2 class="text-center mb-4">Secure File Upload</h2>
 
     <div class="card p-4 shadow-sm">
-        <form method="POST" enctype="multipart/form-data">
+
+        <!-- FIXED: Added action="/upload" -->
+        <form action="/upload" method="POST" enctype="multipart/form-data">
             <input type="file" name="file" class="form-control mb-2" required>
             <input type="password" name="password" class="form-control mb-2" placeholder="Set file password" required>
             <button class="btn btn-primary w-100">Upload</button>
