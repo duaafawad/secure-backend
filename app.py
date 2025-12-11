@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory 
+from flask import Flask, request, send_from_directory, render_template
 from qr_generator import generate_secure_token, save_token, validate_token, generate_qr_for_file
 
 import os
@@ -64,9 +65,10 @@ def file_checksum(path):
 # ROUTES
 # ==============================
 
+
 @app.route("/")
 def home():
-    return "API working!"
+    return render_template("index.html")
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -120,6 +122,18 @@ def upload_file():
 @app.route("/qr_codes/<filename>")
 def serve_qr(filename):
     return send_from_directory(QR_FOLDER, filename)
+
+@app.route("/access")
+def access_page():
+    token = request.args.get("token")
+
+    # If token is missing → show error page or simple message
+    if not token:
+        return render_template("access.html", error="No token provided.")
+
+    # Pass the token to the frontend page (HTML)
+    return render_template("access.html", token=token)
+
 
 
 @app.route("/verify-token", methods=["POST"])
