@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for, session, send_file
-from qr.qr_generator import generate_secure_token, save_token, validate_token, generate_qr_for_file
+from qr_generator import generate_secure_token, save_token, validate_token, generate_qr_for_file
+
 import os
 import hashlib
 from Crypto.Cipher import AES
