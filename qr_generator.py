@@ -4,6 +4,12 @@ import secrets
 import time
 import json
 
+# -------------------------------
+# IMPORT BACKEND_URL
+# -------------------------------
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
+
+
 QR_FOLDER = "qr_codes"
 TOKEN_FILE = "qr_tokens.json"
 
@@ -34,7 +40,13 @@ def validate_token(token):
             return token_db[token]
     return None
 
-def generate_qr_for_file(token, base_url="http://127.0.0.1:5000/access"):
+# ---------------------------------------------------
+# UPDATED: QR now uses BACKEND_URL instead of localhost
+# ---------------------------------------------------
+def generate_qr_for_file(token, base_url=None):
+    if base_url is None:
+        base_url = f"{BACKEND_URL}/access"   # LIVE URL from Koyeb or localhost automatically
+
     secure_url = f"{base_url}?token={token}"
 
     qr = qrcode.QRCode(version=1, box_size=10, border=5)

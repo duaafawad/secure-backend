@@ -64,6 +64,10 @@ def file_checksum(path):
 # ROUTES
 # ==============================
 
+@app.route("/")
+def home():
+    return "API working!"
+
 @app.route("/upload", methods=["POST"])
 def upload_file():
     try:
