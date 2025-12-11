@@ -1,0 +1,4 @@
+Flask
+qrcode
+pycryptodome
+gunicorn
