@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8" />
     <title>Authenticate & Verify</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <script>
         function verifyChecksum() {
             let entered = document.getElementById("userChecksum").value.trim();
@@ -20,34 +20,31 @@
         }
     </script>
 </head>
-
 <body>
 <div class="container mt-5">
     <h2 class="text-center mb-4">Authenticate & Verify File</h2>
 
     <div class="card p-4 shadow-sm">
-        <p><strong>Expected SHA-256 Checksum:</strong>
-            <span id="expectedChecksum">{{ checksum }}</span></p>
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
-        <form method="POST">
+        <p><strong>File:</strong> {{ file_name or "Secure File" }}</p>
+        <p><strong>Expected SHA-256 Checksum:</strong>
+            <span id="expectedChecksum">{{ checksum or "N/A" }}</span></p>
+
+        <form method="POST" action="/access">
+            <input type="hidden" name="token" value="{{ token }}">
             <input type="password" name="password" class="form-control mb-2" placeholder="Enter file password" required>
 
             <input type="text" name="userChecksum" id="userChecksum" class="form-control mb-2"
-                   placeholder="Paste checksum you receieved" required>
+                   placeholder="Paste checksum you received" required>
 
-            <button type="button" class="btn btn-warning w-100 mb-3"
-                    onclick="verifyChecksum()">Verify Checksum</button>
+            <button type="button" class="btn btn-warning w-100 mb-3" onclick="verifyChecksum()">Verify Checksum</button>
 
             <button id="downloadBtn" disabled class="btn btn-success w-100">Download File</button>
         </form>
     </div>
 </div>
-
-<!-- ✅ ADDED: Makes the token available to JavaScript -->
-<script>
-    const token = "{{ token }}";
-    console.log("Token received:", token);
-</script>
-
 </body>
 </html>
