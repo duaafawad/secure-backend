@@ -3,6 +3,7 @@ import os
 import secrets
 import time
 import json
+import hashlib
 
 QR_FOLDER = "qr_codes"
 TOKEN_FILE = "qr_tokens.json"
@@ -30,12 +31,16 @@ def generate_secure_token(length=16):
     return secrets.token_hex(length)
 
 def save_token(token, file_name, password, expiry_seconds=None):
-    """Save token metadata."""
+    """Save token metadata with HASHED password."""
     expiry_time = int(time.time()) + int(expiry_seconds) if expiry_seconds else None
+
+    # 🔐 HASH PASSWORD HERE
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+
     token_db[token] = {
         "file_name": file_name,
         "expiry": expiry_time,
-        "password": password
+        "password_hash": password_hash   # <-- UPDATED KEY
     }
     persist_tokens()
 

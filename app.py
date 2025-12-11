@@ -56,7 +56,6 @@ def index():
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    # upload file and password, encrypt, save token, generate QR
     if "file" not in request.files or "password" not in request.form:
         return render_template("index.html", error="Missing file or password")
     f = request.files["file"]
@@ -68,7 +67,6 @@ def upload():
     original_path = os.path.join(UPLOAD_FOLDER, filename)
     encrypted_path = original_path + ".enc"
 
-    # save original, compute checksum, encrypt, remove original
     f.save(original_path)
     checksum = file_checksum(original_path)
     key = hashlib.sha256(password.encode()).digest()
@@ -78,6 +76,7 @@ def upload():
     # token and QR
     token = generate_secure_token()
     save_token(token, encrypted_path, password, expiry_seconds=3600)
+
     access_url = f"{BACKEND_URL}/access?token={token}"
     qr_img_path, secure_url = generate_qr_for_file(token, base_url=access_url)
     qr_filename = os.path.basename(qr_img_path)
@@ -93,9 +92,6 @@ def upload():
 def serve_qr(filename):
     return send_from_directory(QR_FOLDER, filename)
 
-#
-# Access: password entry
-#
 @app.route("/access", methods=["GET", "POST"])
 def access():
     token = request.args.get("token") or request.form.get("token")
@@ -108,19 +104,20 @@ def access():
     if request.method == "GET":
         return render_template("access_password.html", token=token)
 
-    # POST: password submitted
+    # POST — password entered
     password = request.form.get("password", "")
-    if password != info.get("password"):
+
+    # 🔐 Compare hashed password properly now
+    entered_hash = hashlib.sha256(password.encode()).hexdigest()
+    if entered_hash != info.get("password_hash"):
         return render_template("access_password.html", token=token, error="Incorrect password")
 
-    # password correct: ensure verification flag is reset
+    # Store plaintext password temporarily in session for decrypt later
+    session[f"pw_{token}"] = password
+
     session[f"verified_{token}"] = False
-    # redirect to verify page (GET)
     return redirect(url_for("access_verify", token=token))
 
-#
-# Verify: show expected checksum (GET). Accept checksum (POST) via AJAX and set session flag.
-#
 @app.route("/access/verify", methods=["GET", "POST"])
 def access_verify():
     token = request.args.get("token") or request.form.get("token")
@@ -131,32 +128,26 @@ def access_verify():
         return "Invalid or expired token", 404
 
     encrypted_path = info.get("file_name")
-    stored_password = info.get("password")
-    # compute expected checksum (server-side) using stored password
-    try:
-        key = hashlib.sha256(stored_password.encode()).digest()
-        decrypted_bytes = decrypt_file_bytes(encrypted_path, key)
-        expected_checksum = file_checksum_bytes(decrypted_bytes)
-    except Exception:
-        expected_checksum = None
 
-    # If AJAX POST verifying checksum
+    password = session.get(f"pw_{token}")  # 🔐 plaintext only kept in session, not saved
+    if not password:
+        return "Password missing in session", 403
+
+    key = hashlib.sha256(password.encode()).digest()
+    decrypted_bytes = decrypt_file_bytes(encrypted_path, key)
+    expected_checksum = file_checksum_bytes(decrypted_bytes)
+
     if request.method == "POST":
         entered = request.form.get("userChecksum", "").strip()
-        # normalized comparison
-        ok = (entered.lower() == (expected_checksum or "").lower())
+        ok = (entered.lower() == expected_checksum.lower())
         session[f"verified_{token}"] = bool(ok)
         return jsonify({"success": bool(ok)})
 
-    # GET -> render page
     return render_template("access_verify.html",
                            token=token,
                            file_name=os.path.basename(encrypted_path).replace(".enc", ""),
                            checksum=expected_checksum)
 
-#
-# Download: only allowed if session verified flag set True for token
-#
 @app.route("/download/<token>", methods=["GET"])
 def download(token):
     if not session.get(f"verified_{token}", False):
@@ -164,13 +155,14 @@ def download(token):
     info = validate_token(token)
     if not info:
         return "Invalid or expired token", 404
+
     encrypted_path = info.get("file_name")
-    stored_password = info.get("password")
-    try:
-        key = hashlib.sha256(stored_password.encode()).digest()
-        decrypted_bytes = decrypt_file_bytes(encrypted_path, key)
-    except Exception:
-        return "Decryption failed.", 500
+    password = session.get(f"pw_{token}")
+    if not password:
+        return "Password missing in session", 403
+
+    key = hashlib.sha256(password.encode()).digest()
+    decrypted_bytes = decrypt_file_bytes(encrypted_path, key)
 
     original_name = os.path.basename(encrypted_path).replace(".enc", "")
     return send_file(BytesIO(decrypted_bytes), download_name=original_name, as_attachment=True)
